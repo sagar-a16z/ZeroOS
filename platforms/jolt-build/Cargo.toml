@@ -1,0 +1,19 @@
+[package]
+name = "jolt-build"
+version = "0.2.0"
+edition.workspace = true
+description = "Build tool for Jolt zkVM - independent of jolt-platform"
+
+[[bin]]
+name = "cargo-jolt"
+path = "src/main.rs"
+
+[dependencies]
+# Build infrastructure
+build.workspace = true
+
+# CLI and utilities
+clap.workspace = true
+anyhow.workspace = true
+log.workspace = true
+env_logger.workspace = true

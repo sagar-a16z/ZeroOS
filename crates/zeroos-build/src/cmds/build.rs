@@ -15,6 +15,11 @@ pub struct BuildArgs {
     #[arg(long, short = 'p')]
     pub package: String,
 
+    /// Build in release mode (optimization level 3)
+    /// This flag exists for compatibility with jolt's Program::build API
+    #[arg(long)]
+    pub release: bool,
+
     #[arg(long, default_value = "0x80000000")]
     pub memory_origin: String,
 
@@ -28,7 +33,12 @@ pub struct BuildArgs {
     pub heap_size: String,
 
     #[arg(long, value_enum, default_value = "no-std")]
-    pub mode: StdMode,
+    mode_arg: StdMode,
+
+    /// Enable std mode (with musl) - shorthand for --mode std
+    /// This flag exists for compatibility with jolt's Program::build API
+    #[arg(long)]
+    std: bool,
 
     #[arg(long)]
     pub target: Option<String>,
@@ -46,6 +56,17 @@ pub struct BuildArgs {
     pub cargo_args: Vec<String>,
 }
 
+impl BuildArgs {
+    /// Get the effective std mode, considering both --mode and --std flags
+    pub fn mode(&self) -> StdMode {
+        if self.std {
+            StdMode::Std
+        } else {
+            self.mode_arg
+        }
+    }
+}
+
 pub const TARGET_NO_STD: &str = "riscv64imac-unknown-none-elf";
 
 pub const TARGET_STD: &str = "riscv64imac-zero-linux-musl";
@@ -56,9 +77,20 @@ pub fn build_binary(
     toolchain_paths: Option<(PathBuf, PathBuf)>,
     linker_template: Option<String>,
 ) -> Result<()> {
+    build_binary_with_rustflags(workspace_root, args, toolchain_paths, linker_template, None)
+}
+
+/// Build binary with optional additional rustflags (for platform-specific flags)
+pub fn build_binary_with_rustflags(
+    workspace_root: &PathBuf,
+    args: &BuildArgs,
+    toolchain_paths: Option<(PathBuf, PathBuf)>,
+    linker_template: Option<String>,
+    additional_rustflags: Option<&[&str]>,
+) -> Result<()> {
     info!(
         "Building binary for {:?} mode (fully: {})",
-        args.mode, args.fully
+        args.mode(), args.fully
     );
     debug!("Building package: {}", args.package);
 
@@ -72,13 +104,13 @@ pub fn build_binary(
     debug!("stack_size: 0x{:x} ({} bytes)", stack_size, stack_size);
     debug!("heap_size: 0x{:x} ({} bytes)", heap_size, heap_size);
 
-    let default_target = match args.mode {
+    let default_target = match args.mode() {
         StdMode::Std => TARGET_STD,
         StdMode::NoStd => TARGET_NO_STD,
     };
     let target = args.target.as_deref().unwrap_or(default_target);
 
-    let build_std_arg = match (args.mode, args.fully) {
+    let build_std_arg = match (args.mode(), args.fully) {
         (StdMode::Std, _) => Some("-Zbuild-std=core,alloc,std,panic_abort"),
         (StdMode::NoStd, true) => Some("-Zbuild-std=core,alloc,panic_abort"),
         (StdMode::NoStd, false) => None,
@@ -89,7 +121,12 @@ pub fn build_binary(
 
     let target_dir = crate::project::get_target_directory(workspace_root)?;
 
-    let profile = crate::project::detect_profile(&args.cargo_args);
+    // Determine profile - args.release takes precedence, otherwise detect from cargo_args
+    let profile = if args.release {
+        "release".to_string()
+    } else {
+        crate::project::detect_profile(&args.cargo_args)
+    };
 
     debug!("target_dir: {}", target_dir.display());
     debug!("target: {}", target);
@@ -118,7 +155,7 @@ pub fn build_binary(
         .ok()
         .map(PathBuf::from)
         .or_else(|| {
-            if args.mode == StdMode::Std && target == TARGET_STD {
+            if args.mode() == StdMode::Std && target == TARGET_STD {
                 let target_spec_path = crate_out_dir.join(format!("{}.json", target));
                 write_target_spec(target_spec_path, target).ok();
                 Some(crate_out_dir.clone())
@@ -162,6 +199,13 @@ pub fn build_binary(
         rustflags_parts.push("-Zmacro-backtrace".to_string());
     }
 
+    // Add platform-specific rustflags (e.g., for Jolt's zkVM environment)
+    if let Some(flags) = additional_rustflags {
+        for flag in flags {
+            rustflags_parts.push(flag.to_string());
+        }
+    }
+
     let encoded_rustflags = rustflags_parts.join("\x1f");
     debug!("CARGO_ENCODED_RUSTFLAGS: {:?}", encoded_rustflags);
 
@@ -181,6 +225,12 @@ pub fn build_binary(
     }
 
     cmd.arg("build");
+
+    // Add --release if requested (for compatibility with jolt's Program::build API)
+    if args.release {
+        cmd.arg("--release");
+    }
+
     cmd.arg("--target").arg(target);
 
     cmd.arg("-p").arg(&args.package);

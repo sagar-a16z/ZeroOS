@@ -57,6 +57,13 @@ shift
 # debuggers can't walk the stack, etc. Fixes #90103.
 export CFLAGS="-fPIC -g1 $CFLAGS"
 
+# Use Homebrew GCC on macOS to avoid zlib/SDK conflicts with Apple Clang
+# See: https://github.com/spack/spack/issues/42947
+if [ "$(uname -s)" = "Darwin" ]; then
+  export CC=gcc-15
+  export CXX=g++-15
+fi
+
 # Create temporary directory for build
 WORKDIR="${WORKDIR:-.}"
 mkdir -p "$WORKDIR"

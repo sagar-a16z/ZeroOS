@@ -1,8 +1,8 @@
 [package]
-name = "spike-platform"
+name = "jolt-platform"
 version = "0.2.0"
 edition.workspace = true
-description = "Spike simulator platform for ZeroOS"
+description = "Jolt zkVM platform for ZeroOS"
 
 [lib]
 crate-type = ["rlib"]
@@ -10,12 +10,10 @@ crate-type = ["rlib"]
 [dependencies]
 cfg-if.workspace = true
 libc = { workspace = true, optional = true }
-htif.workspace = true
 debug = { workspace = true }
-foundation = { workspace = true, features = ["trap"] }
+foundation = { workspace = true, features = ["arch", "trap"] }
 zeroos = { workspace = true }
 scheduler-cooperative = { workspace = true, optional = true }
-riscv = { workspace = true }
 
 [features]
 default = ["arch-riscv"]
@@ -39,8 +37,7 @@ bounds-checks = ["zeroos/bounds-checks"]
 
 arch-riscv = ["zeroos/arch-riscv"]
 os-linux = ["zeroos/os-linux"]
-# Use runtime-musl-bootstrap since spike uses arch-riscv's _start which needs __runtime_bootstrap
-runtime-musl = ["zeroos/runtime-musl-bootstrap"]
+runtime-musl = ["zeroos/runtime-musl"]
 libunwind = ["zeroos/libunwind"]
 
 memory = ["zeroos/alloc-linked-list"]

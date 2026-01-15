@@ -10,23 +10,25 @@ crate-type = ["rlib"]
 [dependencies]
 zeroos-macros = { workspace = true }
 spike-platform = { workspace = true, optional = true }
+jolt-platform = { workspace = true, optional = true }
 
 [features]
 default = []
 
 with-spike = ["spike-platform", "spike-platform?/arch-riscv"]
+with-jolt = ["jolt-platform", "jolt-platform?/arch-riscv"]
 
-debug = ["spike-platform?/debug"]
-bounds-checks = ["spike-platform?/bounds-checks"]
+debug = ["spike-platform?/debug", "jolt-platform?/debug"]
+bounds-checks = ["spike-platform?/bounds-checks", "jolt-platform?/bounds-checks"]
 
-std = ["spike-platform?/std"]
-os-linux = ["spike-platform?/os-linux"]
-runtime-musl = ["spike-platform?/runtime-musl"]
-libunwind = ["spike-platform?/libunwind"]
+std = ["spike-platform?/std", "jolt-platform?/std"]
+os-linux = ["spike-platform?/os-linux", "jolt-platform?/os-linux"]
+runtime-musl = ["spike-platform?/runtime-musl", "jolt-platform?/runtime-musl"]
+libunwind = ["spike-platform?/libunwind", "jolt-platform?/libunwind"]
 
-vfs = ["spike-platform?/vfs"]
-vfs-device-console = ["spike-platform?/vfs-device-console"]
-memory = ["spike-platform?/memory"]
-thread = ["spike-platform?/thread"]
+vfs = ["spike-platform?/vfs", "jolt-platform?/vfs"]
+vfs-device-console = ["spike-platform?/vfs-device-console", "jolt-platform?/vfs-device-console"]
+memory = ["spike-platform?/memory", "jolt-platform?/memory"]
+thread = ["spike-platform?/thread", "jolt-platform?/thread"]
 
-random = ["spike-platform?/random"]
+random = ["spike-platform?/random", "jolt-platform?/random"]

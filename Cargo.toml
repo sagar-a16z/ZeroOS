@@ -26,7 +26,10 @@ members = [
   "platforms/platform",
   "platforms/spike-platform",
   "platforms/spike-build",
+  "platforms/jolt-platform",
+  "platforms/jolt-build",
   "examples/fibonacci",
+  "examples/stdlib",
   "examples/syscall-cycles",
   "examples/std-smoke",
   "examples/c-smoke/rust",
@@ -65,6 +68,8 @@ build = { path = "crates/zeroos-build", package = "zeroos-build" }
 
 spike-platform = { path = "platforms/spike-platform", default-features = false }
 spike-build = { path = "platforms/spike-build", default-features = false }
+jolt-platform = { path = "platforms/jolt-platform", default-features = false }
+jolt-build = { path = "platforms/jolt-build", default-features = false }
 platform = { path = "platforms/platform", default-features = false }
 
 htif = { path = "crates/htif", default-features = false }

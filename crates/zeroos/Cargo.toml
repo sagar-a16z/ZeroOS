@@ -32,6 +32,9 @@ os-linux = ["dep:os-linux", "foundation/trap"]
 # Runtime
 runtime-nostd = ["dep:runtime-nostd"]
 runtime-musl = ["dep:runtime-musl"]
+# Enable runtime-musl with bootstrap symbols (_init, _fini, __runtime_bootstrap)
+# Required for platforms using arch-riscv's _start
+runtime-musl-bootstrap = ["runtime-musl", "runtime-musl/bootstrap"]
 runtime-gnu = ["dep:runtime-gnu"]
 libunwind = ["dep:libunwind"]
 

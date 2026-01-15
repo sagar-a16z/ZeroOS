@@ -201,9 +201,9 @@ fn build_command(args: SpikeBuildArgs) -> Result<()> {
         )
     })?;
 
-    let fully = args.base.mode == StdMode::Std || args.base.fully;
+    let fully = args.base.mode() == StdMode::Std || args.base.fully;
 
-    let toolchain_paths = if args.base.mode == StdMode::Std || fully {
+    let toolchain_paths = if args.base.mode() == StdMode::Std || fully {
         Some(build::cmds::get_or_build_toolchain(
             args.base.musl_lib_path.clone(),
             args.base.gcc_lib_path.clone(),

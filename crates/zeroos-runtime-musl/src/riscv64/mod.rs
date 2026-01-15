@@ -1,3 +1,4 @@
 mod bootstrap;
 
-pub use bootstrap::{__runtime_bootstrap, _fini, _init};
+#[cfg(feature = "bootstrap")]
+pub use bootstrap::bootstrap_impl::{__runtime_bootstrap, _fini, _init};
