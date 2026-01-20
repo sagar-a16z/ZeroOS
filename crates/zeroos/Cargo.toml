@@ -36,7 +36,9 @@ runtime-musl = ["dep:runtime-musl"]
 # Required for platforms using arch-riscv's _start
 runtime-musl-bootstrap = ["runtime-musl", "runtime-musl/bootstrap"]
 runtime-gnu = ["dep:runtime-gnu"]
-libunwind = ["dep:libunwind"]
+
+# Backtraces
+backtrace = ["runtime-musl?/backtrace"]
 
 # Capabilities
 ## Memory
@@ -70,7 +72,6 @@ zeroos-macros.workspace = true
 foundation = { workspace = true }
 arch-riscv = { workspace = true, optional = true }
 os-linux = { workspace = true, optional = true }
-libunwind = { workspace = true, optional = true }
 
 runtime-nostd = { workspace = true, optional = true }
 runtime-musl = { workspace = true, optional = true }

@@ -1,0 +1,12 @@
+[package]
+name = "mini-template"
+publish = false
+version.workspace = true
+edition.workspace = true
+description = "Minimal, auditable template renderer"
+
+[lib]
+name = "mini_template"
+path = "src/lib.rs"
+
+[dependencies]

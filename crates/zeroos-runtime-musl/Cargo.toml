@@ -17,6 +17,7 @@ foundation.workspace = true
 default = []
 debug = ["debug/debug"]
 bounds-checks = []
+backtrace = []
 # Enable bootstrap code (_init, _fini, __runtime_bootstrap)
 # Platforms that provide their own boot code should NOT enable this feature
 bootstrap = []

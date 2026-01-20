@@ -1,5 +1,6 @@
 [package]
 name = "std-smoke"
+publish = false
 version.workspace = true
 edition.workspace = true
 
@@ -29,9 +30,8 @@ memory = ["platform/memory"]
 vfs = ["platform/vfs"]
 bounds-checks = ["platform/bounds-checks"]
 thread = ["platform/thread"]
+backtrace = ["platform/backtrace"]
 
 [[bin]]
 name = "std-smoke"
 path = "src/main.rs"
-
-

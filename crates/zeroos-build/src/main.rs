@@ -32,6 +32,8 @@ enum ZeroosCommands {
 
     BuildMusl(BuildMuslArgs),
 
+    InstallMusl(InstallMuslArgs),
+
     FindMusl(FindMuslArgs),
 
     Generate(GenerateArgs),
@@ -60,6 +62,9 @@ struct ZeroosBuildArgs {
 struct ZeroosGenerateTargetArgs {
     #[command(flatten)]
     base: zeroos_build::cmds::GenerateTargetArgs,
+
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+    backtrace: bool,
 
     #[arg(long, short = 'o')]
     output: Option<PathBuf>,
@@ -95,6 +100,27 @@ struct FindMuslArgs {
     arch: String,
 }
 
+#[derive(Parser)]
+struct InstallMuslArgs {
+    #[arg(long, default_value = "riscv64")]
+    arch: String,
+
+    #[arg(long)]
+    output: Option<String>,
+
+    /// GitHub repo in owner/name form (defaults to origin remote or LayerZero-Labs/ZeroOS)
+    #[arg(long)]
+    repo: Option<String>,
+
+    /// Git tag to install from (defaults to latest release)
+    #[arg(long)]
+    tag: Option<String>,
+
+    /// Replace any existing install
+    #[arg(long)]
+    force: bool,
+}
+
 fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -111,6 +137,10 @@ fn main() {
             ZeroosCommands::Build(args) => build_command(args),
             ZeroosCommands::BuildMusl(args) => {
                 build_musl(args);
+                Ok(())
+            }
+            ZeroosCommands::InstallMusl(args) => {
+                install_musl(args);
                 Ok(())
             }
             ZeroosCommands::FindMusl(args) => {
@@ -236,6 +266,58 @@ Or set environment variables:
     }
 }
 
+fn install_musl(args: InstallMuslArgs) {
+    let output_dir = match args.output {
+        Some(path) => expand_tilde(&path),
+        None => {
+            let home = dirs::home_dir().expect("Could not determine home directory");
+            home.join(".zeroos/musl").to_string_lossy().to_string()
+        }
+    };
+
+    let config = zeroos_build::toolchain::InstallConfig {
+        arch: args.arch.clone(),
+        output_dir: output_dir.clone(),
+        repo: args.repo.clone(),
+        tag: args.tag.clone(),
+        force: args.force,
+    };
+
+    println!(
+        "Installing RISC-V musl toolchain\n  Architecture: {}\n  Output:       {}\n  Tag:          {}",
+        args.arch,
+        output_dir,
+        args.tag.clone().unwrap_or_else(|| "latest".to_string()),
+    );
+
+    match zeroos_build::toolchain::install_musl_toolchain(&config) {
+        Ok(paths) => {
+            print_toolchain_paths(
+                &paths,
+                &format!(
+                    "Install successful!\n\nToolchain installed at {}",
+                    config.output_dir
+                ),
+            );
+        }
+        Err(e) => {
+            eprintln!(
+                r"
+Install failed!
+
+Error: {}
+
+Common issues:
+  - Missing: curl, tar
+  - Network: can't reach GitHub Releases/API
+  - Permissions: output dir not writable (use --output ~/path or --force)",
+                e
+            );
+            exit(1);
+        }
+    }
+}
+
 fn print_toolchain_paths(paths: &zeroos_build::toolchain::ToolchainPaths, header: &str) {
     println!(
         r"
@@ -258,7 +340,7 @@ Environment variables:
 
 fn generate_target_command(cli_args: ZeroosGenerateTargetArgs) -> Result<()> {
     use zeroos_build::cmds::generate_target_spec;
-    use zeroos_build::spec::{load_target_profile, parse_target_triple};
+    use zeroos_build::spec::{load_target_profile, parse_target_triple, TargetRenderOptions};
 
     debug!("Generating target spec with args: {:?}", cli_args.base);
 
@@ -275,8 +357,13 @@ fn generate_target_command(cli_args: ZeroosGenerateTargetArgs) -> Result<()> {
         return Err(anyhow::anyhow!("Either --profile or --target is required"));
     };
 
-    let json_content =
-        generate_target_spec(&cli_args.base).map_err(|e| anyhow::anyhow!("{}", e))?;
+    let json_content = generate_target_spec(
+        &cli_args.base,
+        TargetRenderOptions {
+            backtrace: cli_args.backtrace,
+        },
+    )
+    .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     let output_path = cli_args
         .output

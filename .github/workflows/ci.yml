@@ -5,10 +5,12 @@ on:
     branches:
       - master
       - main
+      - dev
   pull_request:
     branches:
       - master
       - main
+      - dev
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -17,8 +19,26 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
+  check-workspace:
+    name: Check workspace conventions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          submodules: true
+      - uses: ./.github/actions/install-base
+      - uses: ./.github/actions/setup-rust
+
+      - name: cargo xtask check-workspace
+        run: |
+          cargo xtask check-workspace
+
   format:
     name: Format
     runs-on: ubuntu-latest
@@ -37,8 +57,12 @@ jobs:
           cargo fmt --all -- --check
 
   lint:
-    name: Lint
-    runs-on: ubuntu-latest
+    name: Lint (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-15]
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
       actions: write
@@ -51,11 +75,15 @@ jobs:
 
       - name: Run clippy
         run: |
-          cargo matrix clippy
+          cargo run -p cargo-matrix -- --command clippy
 
   check:
-    name: Check
-    runs-on: ubuntu-latest
+    name: Check (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-15]
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
       actions: write
@@ -68,11 +96,15 @@ jobs:
       - uses: ./.github/actions/setup-rust
       - name: Check
         run: |
-          cargo matrix check
+          cargo run -p cargo-matrix -- --command check
 
   build:
-    name: Build
-    runs-on: ubuntu-latest
+    name: Build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-15]
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
       actions: write
@@ -86,11 +118,11 @@ jobs:
 
       - name: Build Release
         run: |
-          cargo matrix build
+          cargo run -p cargo-matrix -- --command build
 
   basics-checks:
     name: Basic checks
-    needs: [format, lint, check]
+    needs: [check-workspace, format, lint, check]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:

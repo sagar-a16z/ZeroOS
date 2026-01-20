@@ -1,7 +1,9 @@
 [workspace]
 members = [
   "xtask",
+  "crates/cargo-matrix",
   "crates/htif",
+  "crates/mini-template",
   "crates/zeroos",
   "crates/zeroos-foundation",
   "crates/zeroos-debug",
@@ -12,7 +14,6 @@ members = [
   "crates/zeroos-runtime-musl",
   "crates/zeroos-runtime-gnu",
   "crates/zeroos-runtime-nostd",
-  "crates/zeroos-libunwind",
   "crates/zeroos-build",
   "crates/zeroos-allocator-bump",
   "crates/zeroos-allocator-linked-list",
@@ -43,6 +44,8 @@ description = "ZeroOS"
 
 [workspace.dependencies]
 # Internal workspace crates
+cargo-matrix = { path = "crates/cargo-matrix" }
+mini-template = { path = "crates/mini-template" }
 zeroos = { path = "crates/zeroos" }
 foundation = { path = "crates/zeroos-foundation", package = "zeroos-foundation" }
 debug = { path = "crates/zeroos-debug", package = "zeroos-debug" }
@@ -52,7 +55,6 @@ os-linux = { path = "crates/zeroos-os-linux", package = "zeroos-os-linux" }
 runtime-musl = { path = "crates/zeroos-runtime-musl", package = "zeroos-runtime-musl" }
 runtime-gnu = { path = "crates/zeroos-runtime-gnu", package = "zeroos-runtime-gnu" }
 runtime-nostd = { path = "crates/zeroos-runtime-nostd", package = "zeroos-runtime-nostd" }
-libunwind = { path = "crates/zeroos-libunwind", package = "zeroos-libunwind" }
 allocator-linked-list = { path = "crates/zeroos-allocator-linked-list", package = "zeroos-allocator-linked-list" }
 allocator-bump = { path = "crates/zeroos-allocator-bump", package = "zeroos-allocator-bump" }
 allocator-buddy = { path = "crates/zeroos-allocator-buddy", package = "zeroos-allocator-buddy" }
@@ -67,7 +69,6 @@ rng = { path = "crates/zeroos-rng", package = "zeroos-rng", default-features = f
 build = { path = "crates/zeroos-build", package = "zeroos-build" }
 
 spike-platform = { path = "platforms/spike-platform", default-features = false }
-spike-build = { path = "platforms/spike-build", default-features = false }
 jolt-platform = { path = "platforms/jolt-platform", default-features = false }
 jolt-build = { path = "platforms/jolt-build", default-features = false }
 platform = { path = "platforms/platform", default-features = false }
@@ -81,7 +82,6 @@ libc = "0.2"
 linked_list_allocator = "0.10"
 buddy_system_allocator = "0.11"
 memoffset = "0.9"
-const_format = "0.2"
 derive_builder = "0.20.0"
 clap-cargo = "0.18"
 serde_yaml = "0.9"
@@ -109,14 +109,16 @@ env_logger = "0.11"
 dirs = "5.0"
 tempfile = "3.10"
 paste = "1.0"
+walkdir = "2.5"
+toml = "0.8"
+cargo_toml = "0.22.3"
 
 # Parallelism
 rayon = "1.10"
 
 [profile.dev]
-panic = "abort"
+opt-level = 0
 
 [profile.release]
-panic = "abort"
 opt-level = "z"
 lto = true

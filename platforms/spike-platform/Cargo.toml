@@ -1,5 +1,6 @@
 [package]
 name = "spike-platform"
+publish = false
 version = "0.2.0"
 edition.workspace = true
 description = "Spike simulator platform for ZeroOS"
@@ -26,7 +27,6 @@ std = [
   "arch-riscv",
   "os-linux",
   "runtime-musl",
-  "libunwind",
 
   "vfs-device-console",
   "memory",
@@ -41,7 +41,7 @@ arch-riscv = ["zeroos/arch-riscv"]
 os-linux = ["zeroos/os-linux"]
 # Use runtime-musl-bootstrap since spike uses arch-riscv's _start which needs __runtime_bootstrap
 runtime-musl = ["zeroos/runtime-musl-bootstrap"]
-libunwind = ["zeroos/libunwind"]
+backtrace = ["runtime-musl", "zeroos/backtrace"]
 
 memory = ["zeroos/alloc-linked-list"]
 vfs = ["zeroos/vfs"]
