@@ -15,11 +15,6 @@ pub struct BuildArgs {
     #[arg(long, short = 'p')]
     pub package: String,
 
-    /// Build in release mode (optimization level 3)
-    /// This flag exists for compatibility with jolt's Program::build API
-    #[arg(long)]
-    pub release: bool,
-
     #[arg(long, default_value = "0x80000000")]
     pub memory_origin: String,
 
@@ -33,12 +28,7 @@ pub struct BuildArgs {
     pub heap_size: String,
 
     #[arg(long, value_enum, default_value = "no-std")]
-    mode_arg: StdMode,
-
-    /// Enable std mode (with musl) - shorthand for --mode std
-    /// This flag exists for compatibility with jolt's Program::build API
-    #[arg(long)]
-    std: bool,
+    pub mode: StdMode,
 
     #[arg(long)]
     pub target: Option<String>,
@@ -54,17 +44,6 @@ pub struct BuildArgs {
 
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     pub cargo_args: Vec<String>,
-}
-
-impl BuildArgs {
-    /// Get the effective std mode, considering both --mode and --std flags
-    pub fn mode(&self) -> StdMode {
-        if self.std {
-            StdMode::Std
-        } else {
-            self.mode_arg
-        }
-    }
 }
 
 pub const TARGET_NO_STD: &str = "riscv64imac-unknown-none-elf";
@@ -90,7 +69,7 @@ pub fn build_binary_with_rustflags(
 ) -> Result<()> {
     info!(
         "Building binary for {:?} mode (fully: {})",
-        args.mode(), args.fully
+        args.mode, args.fully
     );
     debug!("Building package: {}", args.package);
 
@@ -104,13 +83,13 @@ pub fn build_binary_with_rustflags(
     debug!("stack_size: 0x{:x} ({} bytes)", stack_size, stack_size);
     debug!("heap_size: 0x{:x} ({} bytes)", heap_size, heap_size);
 
-    let default_target = match args.mode() {
+    let default_target = match args.mode {
         StdMode::Std => TARGET_STD,
         StdMode::NoStd => TARGET_NO_STD,
     };
     let target = args.target.as_deref().unwrap_or(default_target);
 
-    let build_std_arg = match (args.mode(), args.fully) {
+    let build_std_arg = match (args.mode, args.fully) {
         (StdMode::Std, _) => Some("-Zbuild-std=core,alloc,std,panic_abort"),
         (StdMode::NoStd, true) => Some("-Zbuild-std=core,alloc,panic_abort"),
         (StdMode::NoStd, false) => None,
@@ -121,12 +100,7 @@ pub fn build_binary_with_rustflags(
 
     let target_dir = crate::project::get_target_directory(workspace_root)?;
 
-    // Determine profile - args.release takes precedence, otherwise detect from cargo_args
-    let profile = if args.release {
-        "release".to_string()
-    } else {
-        crate::project::detect_profile(&args.cargo_args)
-    };
+    let profile = crate::project::detect_profile(&args.cargo_args);
 
     debug!("target_dir: {}", target_dir.display());
     debug!("target: {}", target);
@@ -155,7 +129,7 @@ pub fn build_binary_with_rustflags(
         .ok()
         .map(PathBuf::from)
         .or_else(|| {
-            if args.mode() == StdMode::Std && target == TARGET_STD {
+            if args.mode == StdMode::Std && target == TARGET_STD {
                 let target_spec_path = crate_out_dir.join(format!("{}.json", target));
                 write_target_spec(target_spec_path, target).ok();
                 Some(crate_out_dir.clone())
@@ -225,12 +199,6 @@ pub fn build_binary_with_rustflags(
     }
 
     cmd.arg("build");
-
-    // Add --release if requested (for compatibility with jolt's Program::build API)
-    if args.release {
-        cmd.arg("--release");
-    }
-
     cmd.arg("--target").arg(target);
 
     cmd.arg("-p").arg(&args.package);

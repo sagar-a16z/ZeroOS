@@ -29,7 +29,11 @@
   "has-rpath": false,
   "crt-static-default": true,
   "crt-static-respected": true,
-  "pre-link-args": {},
+  "pre-link-args": {
+    "gcc": [
+      "-nostartfiles"
+    ]
+  },
   "emit-debug-gdb-scripts": false,
   "supported-split-debuginfo": [
     "off"

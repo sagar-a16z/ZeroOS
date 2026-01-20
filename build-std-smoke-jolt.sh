@@ -14,26 +14,26 @@ if [ ! -f "${JOLT_BUILD}" ]; then
 	cargo build --release -p jolt-build --quiet
 fi
 
-# no-std mode
-echo "Building fibonacci example for Jolt (no-std mode) ..."
-TARGET_TRIPLE="riscv64imac-unknown-none-elf"
+# std mode (tests std library with musl)
+echo "Building std-smoke example for Jolt (std mode) ..."
+TARGET_TRIPLE="riscv64imac-zero-linux-musl"
 OUT_DIR="${ROOT}/target/${TARGET_TRIPLE}/$([ "$PROFILE" = "dev" ] && echo debug || echo "$PROFILE")"
-BIN="${OUT_DIR}/fibonacci"
+BIN="${OUT_DIR}/std-smoke"
 
-"${JOLT_BUILD}" jolt build -p fibonacci --target "${TARGET_TRIPLE}" --quiet --profile "${PROFILE}" --no-default-features --features=with-jolt,debug
+"${JOLT_BUILD}" jolt build -p std-smoke --target "${TARGET_TRIPLE}" --mode std --quiet --profile "${PROFILE}" --features=std
 
 echo "Build successful: ${BIN}"
 ls -la "${BIN}"
 
 # Check if jolt-emu is available for running
 if [ -n "${JOLT_EMU_PATH:-}" ] && [ -f "${JOLT_EMU_PATH}" ]; then
-	echo "Running fibonacci on Jolt emulator..."
+	echo "Running std-smoke on Jolt emulator..."
 	"${JOLT_BUILD}" jolt run "${BIN}"
 	echo ""
-	echo "=== Jolt fibonacci test PASSED ==="
+	echo "=== Jolt std-smoke test PASSED ==="
 else
 	echo ""
 	echo "Note: JOLT_EMU_PATH not set or jolt-emu not found."
 	echo "Build succeeded, but skipping emulator run."
-	echo "To run: JOLT_EMU_PATH=/path/to/jolt-emu ./build-fibonacci-jolt.sh"
+	echo "To run: JOLT_EMU_PATH=/path/to/jolt-emu ./build-std-smoke-jolt.sh"
 fi

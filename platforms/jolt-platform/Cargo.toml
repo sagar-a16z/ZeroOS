@@ -20,7 +20,6 @@ default = ["arch-riscv"]
 
 std = [
   "dep:libc",
-  "zeroos/std",
 
   "arch-riscv",
   "os-linux",
