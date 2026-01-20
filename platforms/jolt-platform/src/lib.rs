@@ -28,13 +28,13 @@ extern crate zeroos;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "std")] {
-        pub use std::{eprintln, println};
+        // println and eprintln macros are defined in ecall.rs via #[macro_export]
+        // They work for both std and no-std modes.
 
         pub fn exit(code: i32) -> ! {
             std::process::exit(code)
         }
     } else {
-        // println and eprintln are macros exported via #[macro_export]
         pub use ecall::putchar;
 
         pub fn exit(code: i32) -> ! {

@@ -305,6 +305,10 @@ mod imp {
 
 pub use imp::_default_trap_handler;
 
+// Define _trap_handler as a weak symbol that jumps to _default_trap_handler.
+// Platforms providing their own _trap_handler can define a strong symbol to override.
+// Only emit this for non-std builds; std builds typically have their own _trap_handler.
+#[cfg(not(feature = "std"))]
 global_asm!(
     ".align 2",
     ".weak _trap_handler",

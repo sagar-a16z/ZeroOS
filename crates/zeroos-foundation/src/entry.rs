@@ -1,10 +1,9 @@
 // Entry point for calling the user's main() function.
 //
-// `__main_entry` is a weak symbol so platforms/SDKs can override it with their own
-// implementation if they have different main() signature requirements.
-// Default implementation is `__default_main_entry`, following the same pattern as
-// `_trap_handler` -> `_default_trap_handler` in arch-riscv.
+// `__main_entry` is defined as a weak symbol that jumps to `__default_main_entry`.
+// Platforms/SDKs can provide their own strong `__main_entry` to override this.
 
+#[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
 use core::arch::global_asm;
 
 cfg_if::cfg_if! {
@@ -40,9 +39,17 @@ cfg_if::cfg_if! {
     }
 }
 
-// Define __main_entry as a weak alias to __default_main_entry.
-// Platforms/SDKs can provide their own strong __main_entry to override this.
+// Define __main_entry as a weak symbol that jumps to __default_main_entry.
+// Platforms providing their own __main_entry can define a strong symbol to override.
+// Only emit this for non-std builds; std builds typically have their own __main_entry.
+#[cfg(all(
+    any(target_arch = "riscv32", target_arch = "riscv64"),
+    not(feature = "std")
+))]
 global_asm!(
     ".weak __main_entry",
-    ".set __main_entry, __default_main_entry",
+    ".type __main_entry, @function",
+    "__main_entry:",
+    "j {default}",
+    default = sym __default_main_entry,
 );

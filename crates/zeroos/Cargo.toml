@@ -19,6 +19,9 @@ debug = [
 ]
 bounds-checks = ["runtime-musl?/bounds-checks"]
 
+# Std mode - propagates to arch and foundation to disable weak symbol emission
+std = ["foundation/std", "arch-riscv?/std"]
+
 # Architecture
 arch-riscv = [
   "dep:arch-riscv",

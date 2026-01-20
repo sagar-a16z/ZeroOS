@@ -1,0 +1,206 @@
+diff --git a/crates/zeroos-arch-riscv/Cargo.toml b/crates/zeroos-arch-riscv/Cargo.toml
+index c3fece9..c5e143a 100644
+--- a/crates/zeroos-arch-riscv/Cargo.toml
++++ b/crates/zeroos-arch-riscv/Cargo.toml
+@@ -18,7 +18,11 @@ zeroos-macros.workspace = true
+ paste.workspace = true
+ 
+ [features]
+-default = []
++default = ["trap-handler-alias"]
+ 
+ debug = ["debug/debug"]
+ std = []
++
++# When enabled, defines _trap_handler as a weak alias to _default_trap_handler.
++# Disable this when providing a custom _trap_handler implementation.
++trap-handler-alias = []
+diff --git a/crates/zeroos-arch-riscv/src/trap.rs b/crates/zeroos-arch-riscv/src/trap.rs
+index f477575..e96eb79 100644
+--- a/crates/zeroos-arch-riscv/src/trap.rs
++++ b/crates/zeroos-arch-riscv/src/trap.rs
+@@ -305,6 +305,10 @@ mod imp {
+ 
+ pub use imp::_default_trap_handler;
+ 
++// Define _trap_handler as a weak alias to _default_trap_handler.
++// This can be disabled via the `trap-handler-alias` feature when a platform
++// provides its own _trap_handler implementation.
++#[cfg(feature = "trap-handler-alias")]
+ global_asm!(
+     ".align 2",
+     ".weak _trap_handler",
+diff --git a/crates/zeroos-foundation/Cargo.toml b/crates/zeroos-foundation/Cargo.toml
+index 8a6baa9..f0fbf50 100644
+--- a/crates/zeroos-foundation/Cargo.toml
++++ b/crates/zeroos-foundation/Cargo.toml
+@@ -30,3 +30,7 @@ arch = []
+ # Boot mode selection
+ std = []
+ libc-main = []
++
++# When enabled, defines __main_entry as a weak alias to __main_entry_impl.
++# Disable this when providing a custom __main_entry implementation.
++main-entry-alias = []
+diff --git a/crates/zeroos-foundation/src/entry.rs b/crates/zeroos-foundation/src/entry.rs
+index bd369a7..9a7980d 100644
+--- a/crates/zeroos-foundation/src/entry.rs
++++ b/crates/zeroos-foundation/src/entry.rs
+@@ -1,4 +1,13 @@
+-// - `#[no_mangle] fn main() -> !` (Rust, must call exit())
++// Entry point implementations for different main() signatures.
++//
++// `__main_entry` is provided as a weak symbol so platforms/SDKs can override it
++// with their own implementation if they have different main() signature requirements.
++// The actual implementation is in `__main_entry_impl`, and `__main_entry` is a weak
++// alias to it (defined via global_asm).
++
++#[cfg(feature = "main-entry-alias")]
++use core::arch::global_asm;
++
+ cfg_if::cfg_if! {
+     if #[cfg(feature = "libc-main")] {
+         extern "C" {
+@@ -10,7 +19,7 @@ cfg_if::cfg_if! {
+         /// # Safety
+         /// The caller must provide `argv` and `envp` pointers that are valid per the platform ABI
+         /// (or null), and remain valid for the duration of the call.
+-        pub unsafe extern "C" fn __main_entry(argc: i32, argv: *const *const u8, envp: *const *const u8) -> i32 {
++        pub unsafe extern "C" fn __main_entry_impl(argc: i32, argv: *const *const u8, envp: *const *const u8) -> i32 {
+             main(argc, argv, envp)
+         }
+     } else {
+@@ -22,7 +31,7 @@ cfg_if::cfg_if! {
+ 
+         #[no_mangle]
+         #[inline(never)]
+-        pub extern "C" fn __main_entry(_argc: i32, _argv: *const *const u8, _envp: *const *const u8) -> i32 {
++        pub extern "C" fn __main_entry_impl(_argc: i32, _argv: *const *const u8, _envp: *const *const u8) -> i32 {
+             debug::writeln!("[BOOT] __main_entry argc={} argv=0x{:x}", _argc, _argv as usize);
+ 
+             unsafe {
+@@ -32,3 +41,12 @@ cfg_if::cfg_if! {
+         }
+     }
+ }
++
++// Define __main_entry as a weak alias to __main_entry_impl.
++// This can be disabled via the `main-entry-alias` feature when a platform
++// provides its own __main_entry implementation.
++#[cfg(feature = "main-entry-alias")]
++global_asm!(
++    ".weak __main_entry",
++    ".set __main_entry, __main_entry_impl",
++);
+diff --git a/crates/zeroos-foundation/src/lib.rs b/crates/zeroos-foundation/src/lib.rs
+index b6d76b2..bd03db3 100644
+--- a/crates/zeroos-foundation/src/lib.rs
++++ b/crates/zeroos-foundation/src/lib.rs
+@@ -10,7 +10,9 @@ pub mod ops;
+ pub mod utils;
+ 
+ pub use arch::SyscallFrame;
+-pub use entry::__main_entry;
++// Note: __main_entry is a weak symbol defined via global_asm in entry.rs.
++// We export __main_entry_impl for cases where the implementation needs to be called directly.
++pub use entry::__main_entry_impl;
+ 
+ pub use kernel::{init, GlobalKernel, Kernel, KERNEL};
+ 
+diff --git a/crates/zeroos-runtime-musl/src/riscv64/bootstrap.rs b/crates/zeroos-runtime-musl/src/riscv64/bootstrap.rs
+index 4dc7ab7..86b092b 100644
+--- a/crates/zeroos-runtime-musl/src/riscv64/bootstrap.rs
++++ b/crates/zeroos-runtime-musl/src/riscv64/bootstrap.rs
+@@ -2,13 +2,16 @@
+ // Platforms that provide their own boot code (like jolt-sdk) should not
+ // enable this feature to avoid symbol conflicts with _init/_fini.
+ #[cfg(feature = "bootstrap")]
+-mod bootstrap_impl {
++pub mod bootstrap_impl {
+     use crate::build_musl_stack;
+     use core::arch::naked_asm;
+ 
+-    use foundation::__main_entry;
+-
+     extern "C" {
++        /// Entry point for the user's main function.
++        /// This is a weak symbol defined by foundation that can be overridden
++        /// by platforms/SDKs that need a different main() signature.
++        fn __main_entry(argc: i32, argv: *const *const u8, envp: *const *const u8) -> i32;
++
+         fn __libc_start_main(
+             main_fn: extern "C" fn(i32, *const *const u8, *const *const u8) -> i32,
+             argc: i32,
+diff --git a/crates/zeroos/Cargo.toml b/crates/zeroos/Cargo.toml
+index a2c0ed8..0f6e0c3 100644
+--- a/crates/zeroos/Cargo.toml
++++ b/crates/zeroos/Cargo.toml
+@@ -24,6 +24,14 @@ arch-riscv = [
+   "dep:arch-riscv",
+   "foundation/arch",
+   "scheduler-cooperative?/riscv",
++  "arch-riscv/trap-handler-alias",
++  "foundation/main-entry-alias",
++]
++# arch-riscv without default weak symbol aliases (for platforms providing their own)
++arch-riscv-no-aliases = [
++  "dep:arch-riscv",
++  "foundation/arch",
++  "scheduler-cooperative?/riscv",
+ ]
+ 
+ # OS
+@@ -61,6 +69,9 @@ random = ["foundation/random", "os-linux?/random"]
+ rng-lcg = ["random", "dep:rng", "rng/lcg"]
+ rng-chacha = ["random", "dep:rng", "rng/chacha"]
+ 
++# Boot mode - libc-style main(argc, argv, envp) -> i32
++libc-main = ["foundation/libc-main"]
++
+ [dependencies]
+ debug = { workspace = true }
+ zeroos-macros.workspace = true
+diff --git a/platforms/jolt-platform/src/boot.rs b/platforms/jolt-platform/src/boot.rs
+index 826a1a4..262af75 100644
+--- a/platforms/jolt-platform/src/boot.rs
++++ b/platforms/jolt-platform/src/boot.rs
+@@ -9,15 +9,21 @@ extern "C" {
+     static __stack_bottom: u8;
+ }
+ 
++/// Install the trap vector (mtvec = _trap_handler).
++/// This is called during platform bootstrap when os-linux feature is enabled.
++#[inline(always)]
++#[cfg(feature = "os-linux")]
++fn install_trap_vector() {
++    #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
++    unsafe {
++        core::arch::asm!("la t0, _trap_handler", "csrw mtvec, t0");
++    }
++}
++
+ #[no_mangle]
+ pub extern "C" fn __platform_bootstrap() {
+     debug::writeln!("[BOOT] __platform_bootstrap (jolt-platform)");
+ 
+-    // Note: For no-std mode, we don't set up a trap handler.
+-    // Exit is handled via `j .` (infinite loop) which the Jolt emulator
+-    // detects via PC stall. For std mode (os-linux), the trap handler
+-    // is set up separately to route syscalls through ZeroOS.
+-
+     zeroos::initialize();
+ 
+     #[cfg(feature = "memory")]
+@@ -39,6 +45,12 @@ pub extern "C" fn __platform_bootstrap() {
+ 
+     cfg_if::cfg_if! {
+         if #[cfg(not(target_os = "none"))] {
++            #[cfg(feature = "os-linux")]
++            {
++                install_trap_vector();
++                debug::writeln!("[BOOT] Trap handler installed");
++            }
++
+             #[cfg(feature = "thread")]
+             {
+                 let anchor = foundation::kfn::scheduler::kinit();

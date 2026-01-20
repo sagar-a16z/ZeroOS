@@ -20,6 +20,7 @@ default = ["arch-riscv"]
 
 std = [
   "dep:libc",
+  "zeroos/std",
 
   "arch-riscv",
   "os-linux",
@@ -37,7 +38,7 @@ bounds-checks = ["zeroos/bounds-checks"]
 
 arch-riscv = ["zeroos/arch-riscv"]
 os-linux = ["zeroos/os-linux"]
-runtime-musl = ["zeroos/runtime-musl"]
+runtime-musl = ["zeroos/runtime-musl-bootstrap"]
 libunwind = ["zeroos/libunwind"]
 
 memory = ["zeroos/alloc-linked-list"]
