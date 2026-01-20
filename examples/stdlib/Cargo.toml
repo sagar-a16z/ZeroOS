@@ -9,7 +9,7 @@ debug.workspace = true
 cfg-if.workspace = true
 
 [features]
-default = ["with-spike"]
+default = []
 
 debug = ["platform/debug"]
 

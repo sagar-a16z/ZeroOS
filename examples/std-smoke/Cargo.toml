@@ -16,6 +16,7 @@ libc.workspace = true
 default = ["memory"]
 
 with-spike = ["platform/with-spike"]
+with-jolt = ["platform/with-jolt"]
 std = ["platform/std", "debug", "memory", "vfs", "bounds-checks", "thread"]
 debug = ["platform/debug"]
 memory = ["platform/memory"]

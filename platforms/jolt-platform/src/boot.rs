@@ -52,7 +52,7 @@ pub extern "C" fn __platform_bootstrap() {
             }
 
             #[cfg(feature = "thread")]
-            {
+            let boot_thread_anchor: usize = {
                 let anchor = foundation::kfn::scheduler::kinit();
 
                 // Prime the current tp with the returned anchor and set mscratch to 0.
@@ -62,7 +62,9 @@ pub extern "C" fn __platform_bootstrap() {
                     core::arch::asm!("mv tp, {0}", in(reg) anchor);
                     core::arch::asm!("csrw mscratch, x0");
                 }
-            }
+
+                anchor
+            };
 
             #[cfg(feature = "vfs")]
             {
@@ -81,6 +83,17 @@ pub extern "C" fn __platform_bootstrap() {
                 // SECURITY: RNG seed is fixed (0) for deterministic ZK proofs.
                 // This is intentional for zkVM - proofs must be reproducible.
                 foundation::kfn::random::kinit(0);
+            }
+
+            // Before entering libc: leave tp for TLS (musl owns it) and park anchor in mscratch,
+            // so a user trap swaps the anchor into tp on entry.
+            #[cfg(feature = "thread")]
+            {
+                #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
+                unsafe {
+                    core::arch::asm!("csrw mscratch, {0}", in(reg) boot_thread_anchor);
+                    core::arch::asm!("mv tp, x0");
+                }
             }
         }
     }

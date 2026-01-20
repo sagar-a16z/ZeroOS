@@ -14,6 +14,7 @@ debug = { workspace = true }
 foundation = { workspace = true, features = ["arch", "trap"] }
 zeroos = { workspace = true }
 scheduler-cooperative = { workspace = true, optional = true }
+riscv = { workspace = true }
 
 [features]
 default = ["arch-riscv"]

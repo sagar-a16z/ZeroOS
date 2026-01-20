@@ -13,6 +13,11 @@
 
 mod boot;
 pub mod ecall;
+#[cfg(all(
+    not(target_os = "none"),
+    any(target_arch = "riscv32", target_arch = "riscv64")
+))]
+mod trap;
 
 extern crate zeroos;
 

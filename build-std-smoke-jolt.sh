@@ -20,7 +20,7 @@ TARGET_TRIPLE="riscv64imac-zero-linux-musl"
 OUT_DIR="${ROOT}/target/${TARGET_TRIPLE}/$([ "$PROFILE" = "dev" ] && echo debug || echo "$PROFILE")"
 BIN="${OUT_DIR}/std-smoke"
 
-"${JOLT_BUILD}" jolt build -p std-smoke --target "${TARGET_TRIPLE}" --mode std --quiet --profile "${PROFILE}" --features=std
+"${JOLT_BUILD}" jolt build -p std-smoke --target "${TARGET_TRIPLE}" --mode std --quiet --profile "${PROFILE}" --features=std,with-jolt
 
 echo "Build successful: ${BIN}"
 ls -la "${BIN}"
