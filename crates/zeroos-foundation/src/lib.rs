@@ -10,7 +10,9 @@ pub mod ops;
 pub mod utils;
 
 pub use arch::SyscallFrame;
-pub use entry::__main_entry;
+// Note: __main_entry is a weak symbol defined via global_asm in entry.rs.
+// We export __default_main_entry for cases where the implementation needs to be called directly.
+pub use entry::__default_main_entry;
 
 pub use kernel::{init, GlobalKernel, Kernel, KERNEL};
 

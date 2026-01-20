@@ -9,14 +9,20 @@ extern "C" {
     static __stack_bottom: u8;
 }
 
+/// Install the trap vector (mtvec = _trap_handler).
+/// This is called during platform bootstrap when os-linux feature is enabled.
+#[inline(always)]
+#[cfg(feature = "os-linux")]
+fn install_trap_vector() {
+    #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
+    unsafe {
+        core::arch::asm!("la t0, _trap_handler", "csrw mtvec, t0");
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn __platform_bootstrap() {
     debug::writeln!("[BOOT] __platform_bootstrap (jolt-platform)");
-
-    // Note: For no-std mode, we don't set up a trap handler.
-    // Exit is handled via `j .` (infinite loop) which the Jolt emulator
-    // detects via PC stall. For std mode (os-linux), the trap handler
-    // is set up separately to route syscalls through ZeroOS.
 
     zeroos::initialize();
 
@@ -39,6 +45,12 @@ pub extern "C" fn __platform_bootstrap() {
 
     cfg_if::cfg_if! {
         if #[cfg(not(target_os = "none"))] {
+            #[cfg(feature = "os-linux")]
+            {
+                install_trap_vector();
+                debug::writeln!("[BOOT] Trap handler installed");
+            }
+
             #[cfg(feature = "thread")]
             {
                 let anchor = foundation::kfn::scheduler::kinit();

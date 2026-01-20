@@ -2,13 +2,16 @@
 // Platforms that provide their own boot code (like jolt-sdk) should not
 // enable this feature to avoid symbol conflicts with _init/_fini.
 #[cfg(feature = "bootstrap")]
-mod bootstrap_impl {
+pub mod bootstrap_impl {
     use crate::build_musl_stack;
     use core::arch::naked_asm;
 
-    use foundation::__main_entry;
-
     extern "C" {
+        /// Entry point for the user's main function.
+        /// This is a weak symbol defined by foundation that can be overridden
+        /// by platforms/SDKs that need a different main() signature.
+        fn __main_entry(argc: i32, argv: *const *const u8, envp: *const *const u8) -> i32;
+
         fn __libc_start_main(
             main_fn: extern "C" fn(i32, *const *const u8, *const *const u8) -> i32,
             argc: i32,
