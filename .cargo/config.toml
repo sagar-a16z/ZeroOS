@@ -6,3 +6,4 @@ act = "run --package xtask -- act"
 
 zeroos = "run -q -p zeroos-build --bin cargo-zeroos -- zeroos"
 spike = "run -q -p spike-build --bin cargo-spike -- spike"
+jolt = "run -q -p jolt-build --bin cargo-jolt -- jolt"

@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::process::{exit, Command};
 
 use build::cmds::{BuildArgs, StdMode};
+use build::spec::TargetRenderOptions;
 
 /// Linker script template embedded at compile time.
 /// This avoids the need to discover it via cargo metadata, which can find the wrong
@@ -234,8 +235,8 @@ fn generate_target_command(cli_args: JoltGenerateTargetArgs) -> Result<()> {
         return Err(anyhow::anyhow!("Either --profile or --target is required"));
     };
 
-    let json_content =
-        generate_target_spec(&cli_args.base).map_err(|e| anyhow::anyhow!("{}", e))?;
+    let json_content = generate_target_spec(&cli_args.base, TargetRenderOptions::default())
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     let output_path = cli_args
         .output

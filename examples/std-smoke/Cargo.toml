@@ -13,18 +13,10 @@ rayon.workspace = true
 libc.workspace = true
 
 [features]
-default = ["with-spike", "memory"]
+default = ["memory"]
 
 with-spike = ["platform/with-spike"]
-std = [
-  "with-spike",
-  "platform/std",
-  "debug",
-  "memory",
-  "vfs",
-  "bounds-checks",
-  "thread",
-]
+std = ["platform/std", "debug", "memory", "vfs", "bounds-checks", "thread"]
 debug = ["platform/debug"]
 memory = ["platform/memory"]
 vfs = ["platform/vfs"]
