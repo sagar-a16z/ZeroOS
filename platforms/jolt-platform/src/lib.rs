@@ -61,35 +61,15 @@ cfg_if::cfg_if! {
 
 /// Exit the program.
 ///
-/// For std mode (with os-linux): Uses SYS_EXIT syscall which is handled by the
-/// trap handler and routed through ZeroOS's syscall infrastructure.
-///
-/// For no-std mode: Enters an infinite loop (`j .`) which the Jolt emulator
-/// detects via PC stall (prev_pc == pc) and treats as clean termination.
+/// Enters an infinite loop (`j .`) which the Jolt emulator detects via PC stall
+/// (prev_pc == pc) and treats as clean termination.
 #[no_mangle]
 pub extern "C" fn platform_exit(_code: i32) -> ! {
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "os-linux")] {
-            // std mode: use SYS_EXIT syscall, handled by trap handler
-            const SYS_EXIT: usize = 93;
-            unsafe {
-                core::arch::asm!(
-                    "ecall",
-                    in("a7") SYS_EXIT,
-                    in("a0") _code,
-                    options(noreturn)
-                );
-            }
-        } else {
-            // no-std mode: infinite loop for clean termination
-            // The Jolt emulator detects this via PC stall (prev_pc == pc)
-            unsafe {
-                core::arch::asm!(
-                    "j .",
-                    options(noreturn)
-                );
-            }
-        }
+    unsafe {
+        core::arch::asm!(
+            "j .",
+            options(noreturn)
+        );
     }
 }
 
