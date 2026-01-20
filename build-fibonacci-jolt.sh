@@ -13,12 +13,12 @@ TARGET_TRIPLE="riscv64imac-unknown-none-elf"
 OUT_DIR="${ROOT}/target/${TARGET_TRIPLE}/$([ "$PROFILE" = "dev" ] && echo debug || echo "$PROFILE")"
 BIN="${OUT_DIR}/fibonacci"
 
-cargo jolt build -p fibonacci --target "${TARGET_TRIPLE}" -- --quiet --features=debug --profile "${PROFILE}"
+cargo jolt build -p fibonacci --target "${TARGET_TRIPLE}" -- --quiet --features=debug,with-jolt --profile "${PROFILE}"
 OUT_NOSTD="$(mktemp)"
 OUT_STD="$(mktemp)"
 trap 'rm -f "${OUT_NOSTD}" "${OUT_STD}"' EXIT
 
-cargo jolt run "${BIN}" | tee "${OUT_NOSTD}"
+RUST_LOG=debug cargo jolt run "${BIN}" | tee "${OUT_NOSTD}"
 grep -q "fibonacci(10) = 55" "${OUT_NOSTD}"
 grep -q "Test PASSED" "${OUT_NOSTD}"
 
@@ -28,7 +28,7 @@ TARGET_TRIPLE="riscv64imac-zero-linux-musl"
 OUT_DIR="${ROOT}/target/${TARGET_TRIPLE}/$([ "$PROFILE" = "dev" ] && echo debug || echo "$PROFILE")"
 BIN="${OUT_DIR}/fibonacci"
 
-cargo jolt build -p fibonacci --target "${TARGET_TRIPLE}" --mode std -- --quiet --features=std,debug --profile "${PROFILE}"
-cargo jolt run "${BIN}" | tee "${OUT_STD}"
+cargo jolt build -p fibonacci --target "${TARGET_TRIPLE}" --mode std -- --quiet --features=std,debug,with-jolt --profile "${PROFILE}"
+RUST_LOG=debug cargo jolt run "${BIN}" | tee "${OUT_STD}"
 grep -q "fibonacci(10) = 55" "${OUT_STD}"
 grep -q "Test PASSED" "${OUT_STD}"
